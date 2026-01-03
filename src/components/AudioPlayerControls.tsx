@@ -21,7 +21,7 @@ export default function AudioPlayerControls() {
   }
 
   return (
-    <div className="fixed bottom-4 z-50 bg-black/90 backdrop-blur-sm rounded-full border  border-neutral-800">
+    <div className="fixed bottom-4 z-50 bg-black/70 backdrop-blur-sm rounded-full border  border-neutral-800">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-center gap-4">
           {/* 音乐封面和名称 */}
@@ -30,7 +30,7 @@ export default function AudioPlayerControls() {
               <img
                 src={state.cover}
                 alt={state.title || '音乐封面'}
-                className="w-12 h-12 rounded object-cover"
+                className="w-12 h-12 rounded object-cover rounded-full border border-stone-900"
               />
             ) : (
               <div className="w-12 h-12 rounded bg-neutral-800 flex items-center justify-center">
@@ -66,26 +66,6 @@ export default function AudioPlayerControls() {
               )}
             </Button>
           </div>
-
-          {/* 时间进度条 */}
-          {/* <div className="flex-1 flex items-center gap-2">
-            <span className="text-xs text-neutral-400 min-w-[3rem]">
-              {formatTime(state.currentTime)}
-            </span>
-            <input
-              type="range"
-              min="0"
-              max={state.duration || 0}
-              step="0.1"
-              value={state.currentTime}
-              onChange={(e) => controls.seekTo(parseFloat(e.target.value))}
-              className="flex-1 h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-white"
-              aria-label="播放进度"
-            />
-            <span className="text-xs text-neutral-400 min-w-[3rem]">
-              {formatTime(state.duration)}
-            </span>
-          </div> */}
 
           {/* 音量控制 */}
           <div className="flex items-center gap-2 min-w-[120px]">

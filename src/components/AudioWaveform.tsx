@@ -54,14 +54,14 @@ export default function AudioWaveform({
   }, [height, normalize, interact, waveColor, progressColor, cursorColor]);
 
   return (
-    <div className={`audio-waveform ${className}`}>
+    <div className={`audio-waveform h-[160px] relative flex items-center justify-center ${className}`}>
       {state.error && (
-        <div className="mb-4 p-3 text-zinc-400">
+        <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-zinc-400">
           错误: {state.error}
         </div>
       )}
       {state.isLoading && !state.error && (
-        <div className="mb-4 p-3 text-zinc-400">
+        <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-zinc-400">
           正在加载音频...
         </div>
       )}
