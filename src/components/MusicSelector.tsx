@@ -40,11 +40,7 @@ export default function MusicSelector({
   };
 
   return (
-    <div
-      className="fixed z-50 font-mono 
-                  top-4 left-4 right-4 
-                  md:top-auto md:right-auto md:left-6 md:bottom-4 md:w-auto"
-    >
+    <div className="fixed z-50 font-mono top-4 right-4">
       <Select
         value={currentValue}
         onValueChange={handleValueChange}
@@ -55,7 +51,7 @@ export default function MusicSelector({
           className={`
             w-full md:w-[240px]
             h-9 px-4 border border-neutral-900 rounded-full
-            bg-black text-white font-bold
+            bg-black text-white
             backdrop-blur-sm
             transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
             hover:border-neutral-700 hover:bg-neutral-900
@@ -64,19 +60,19 @@ export default function MusicSelector({
         >
           <SelectValue>
             {currentItem ? (
-              <div className="flex items-center gap-3 w-full flex-1 min-w-0">
+              <div className="flex items-center gap-2 w-full flex-1 min-w-0 pr-2 text-left">
                 {/* 编号 */}
-                <span className="text-[10px] w-5 opacity-40 font-light shrink-0">
+                <span className="text-sm w-5 opacity-40 shrink-0 min-w-content font-mono">
                   {String(currentItem.number).padStart(2, "0")}
                 </span>
 
                 {/* 标题 */}
-                <span className="text-sm truncate flex-1 tracking-wide">
+                <span className="text-sm flex-1 tracking-wide font-mono min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                   {currentItem.title}
                 </span>
 
                 {/* 播放状态指示器 */}
-                <div className="flex items-center p-2 gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <div className="relative flex h-2 w-2">
                     {isPlaying && (
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -99,7 +95,6 @@ export default function MusicSelector({
           position="popper"
         >
           {musicList.map((item, index) => {
-            const isSelected = index === currentIndex;
             return (
               <SelectItem
                 key={item.url}
@@ -108,31 +103,15 @@ export default function MusicSelector({
                   text-white cursor-pointer
                   focus:bg-neutral-900 focus:text-white
                   data-[highlighted]:bg-neutral-900 data-[highlighted]:text-white
-                  ${isSelected ? "font-bold" : ""}
                 `}
               >
-                <div className="flex items-center gap-3 w-full">
-                  {/* 编号 */}
-                  <span className="text-[10px] w-5 opacity-40 font-light shrink-0">
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-sm w-5 opacity-40 shrink-0 font-mono">
                     {String(item.number).padStart(2, "0")}
                   </span>
-
-                  {/* 标题 */}
-                  <span className="text-sm truncate flex-1 tracking-wide">
+                  <span className="text-sm truncate flex-1 tracking-wide font-mono">
                     {item.title}
                   </span>
-
-                  {/* 播放状态指示器（仅在选中项显示） */}
-                  {isSelected && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="relative flex h-2 w-2">
-                        {isPlaying && (
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                        )}
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </SelectItem>
             );

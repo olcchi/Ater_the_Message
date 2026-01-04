@@ -1,6 +1,12 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 
+export interface Track {
+  url: string;
+  title?: string;
+  cover?: string;
+}
+
 export interface AudioPlayerState {
   isPlaying: boolean;
   duration: number;
@@ -12,6 +18,11 @@ export interface AudioPlayerState {
   audioUrl: string | null;
   title?: string;
   cover?: string;
+  playlist: Track[];
+  currentIndex: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  isLooping: boolean;
 }
 
 export interface AudioPlayerControls {
@@ -20,6 +31,10 @@ export interface AudioPlayerControls {
   toggleMute: () => void;
   seekTo: (time: number) => void;
   loadAudio: (url: string, title?: string, cover?: string) => void;
+  setPlaylist: (tracks: Track[], startIndex?: number) => void;
+  skipToNext: () => void;
+  skipToPrevious: () => void;
+  toggleLoop: () => void;
 }
 
 export interface AudioPlayerContextValue {
@@ -32,7 +47,7 @@ export interface AudioPlayerContextValue {
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
 export function AudioPlayerProvider({ children }: { children: ReactNode }) {
-  // 这个 provider 将在 AudioWaveform 中实现
+  // 这个 provider 将在 AudioPlayerProvider.tsx 中实现
   return <>{children}</>;
 }
 
@@ -45,7 +60,3 @@ export function useAudioPlayer() {
 }
 
 export { AudioPlayerContext };
-
-
-
-

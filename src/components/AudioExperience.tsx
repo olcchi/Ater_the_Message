@@ -48,10 +48,10 @@ function AudioExperienceContent() {
         {/* <div className="absolute inset-0 bg-black/50 z-1" /> */}
         <div className="absolute inset-0 z-0">
           <DarkVeil
-            hueShift={21}
-            noiseIntensity={0.02}
+            hueShift={25}
+            noiseIntensity={0}
             scanlineIntensity={0.1}
-            speed={0.8}
+            speed={1}
             scanlineFrequency={5}
             warpAmount={0.2}
             resolutionScale={1}
