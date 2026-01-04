@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface MusicItem {
   url: string;
@@ -12,81 +18,127 @@ interface MusicSelectorProps {
   musicList: MusicItem[];
   currentIndex: number;
   onSelectMusic: (index: number) => void;
+  isPlaying: boolean;
 }
 
 export default function MusicSelector({
   musicList,
   currentIndex,
   onSelectMusic,
+  isPlaying,
 }: MusicSelectorProps) {
-  const { state } = useAudioPlayer();
-  const [isHovered, setIsHovered] = useState(false);
+  const [open, setOpen] = useState(false);
 
   if (!musicList || musicList.length === 0) return null;
 
-  const current = musicList[currentIndex];
-  // 边界检查：第一首没有prev，最后一首没有next
-  const prev = currentIndex > 0 ? musicList[currentIndex - 1] : null;
-  const next = currentIndex < musicList.length - 1 ? musicList[currentIndex + 1] : null;
+  const currentItem = musicList[currentIndex];
+  const currentValue = currentIndex.toString();
 
-  const itemsToRender = [
-    next ? { item: next, type: 'next', index: currentIndex + 1 } : null,
-    { item: current, type: 'current', index: currentIndex },
-    prev ? { item: prev, type: 'prev', index: currentIndex - 1 } : null,
-  ].filter((d): d is { item: MusicItem, type: string, index: number } => Boolean(d));
+  const handleValueChange = (value: string) => {
+    const index = parseInt(value, 10);
+    onSelectMusic(index);
+  };
 
   return (
-    <div 
-      className="fixed left-4 bottom-4 z-50 font-mono"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+    <div
+      className="fixed z-50 font-mono 
+                  top-4 left-4 right-4 
+                  md:top-auto md:right-auto md:left-6 md:bottom-4 md:w-auto"
     >
-      <div className="flex flex-col-reverse items-start">
-        {itemsToRender.map(({ item, type, index }) => {
-          const isCurrent = type === 'current';
-          const isSelected = item.url === state.audioUrl;
-          
-          const show = isCurrent || isHovered;
+      <Select
+        value={currentValue}
+        onValueChange={handleValueChange}
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <SelectTrigger
+          className={`
+            w-full md:w-[240px]
+            h-9 px-4 border border-neutral-900 rounded-full
+            bg-black text-white font-bold
+            backdrop-blur-sm
+            transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]
+            hover:border-neutral-700 hover:bg-neutral-900
+            focus:ring-0 focus:ring-offset-0
+          `}
+        >
+          <SelectValue>
+            {currentItem ? (
+              <div className="flex items-center gap-3 w-full flex-1 min-w-0">
+                {/* 编号 */}
+                <span className="text-[10px] w-5 opacity-40 font-light shrink-0">
+                  {String(currentItem.number).padStart(2, "0")}
+                </span>
 
-          return (
-            <button
-              key={item.url}
-              onClick={() => onSelectMusic(index)}
-              style={{
-                // 修改点：移除 marginBottom 的动态计算
-                // 当元素折叠时(maxHeight:0)，它应该完全不占空间，
-                // 这样无论下方有没有 'next' 元素，当前元素的底部基准线都是一致的。
-                maxHeight: show ? '40px' : '0px',
-                opacity: show ? 1 : 0,
-                marginBottom: '0px', 
-              }}
-              className={`
-                flex items-center gap-3 w-[240px] px-3 rounded-md text-left overflow-hidden
-                /* 稍微调整一下缓动曲线，让收起时更干脆 */
-                transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)]
-                ${isCurrent ? "z-20" : "z-10"} 
-                ${isSelected ? "text-white" : "text-white/60 hover:text-white"}
-                hover:bg-white/10
-              `}
-            >
-              <span className={`text-xs ${isSelected ? "text-white" : "opacity-30"}`}>
-                {String(item.number).padStart(2, '0')}
-              </span>
-              
-              <span className={`text-sm truncate flex-1 ${isSelected ? "font-bold" : ""}`}>
-                {item.title}
-              </span>
+                {/* 标题 */}
+                <span className="text-sm truncate flex-1 tracking-wide">
+                  {currentItem.title}
+                </span>
 
-              {isSelected && (
-                <div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-      
-      {/* 鼠标热区垫片 */}
-      <div className={`absolute bottom-0 left-0 w-full bg-transparent transition-all duration-300 ${isHovered ? 'h-[130px]' : 'h-[40px]'}`} style={{ zIndex: -1 }} />
+                {/* 播放状态指示器 */}
+                <div className="flex items-center p-2 gap-2 shrink-0">
+                  <div className="relative flex h-2 w-2">
+                    {isPlaying && (
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    )}
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <span>选择音乐</span>
+            )}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent
+          className="
+            bg-black border-neutral-900 backdrop-blur-sm
+            rounded-lg overflow-hidden
+            w-[var(--radix-select-trigger-width)]
+          "
+          position="popper"
+        >
+          {musicList.map((item, index) => {
+            const isSelected = index === currentIndex;
+            return (
+              <SelectItem
+                key={item.url}
+                value={index.toString()}
+                className={`
+                  text-white cursor-pointer
+                  focus:bg-neutral-900 focus:text-white
+                  data-[highlighted]:bg-neutral-900 data-[highlighted]:text-white
+                  ${isSelected ? "font-bold" : ""}
+                `}
+              >
+                <div className="flex items-center gap-3 w-full">
+                  {/* 编号 */}
+                  <span className="text-[10px] w-5 opacity-40 font-light shrink-0">
+                    {String(item.number).padStart(2, "0")}
+                  </span>
+
+                  {/* 标题 */}
+                  <span className="text-sm truncate flex-1 tracking-wide">
+                    {item.title}
+                  </span>
+
+                  {/* 播放状态指示器（仅在选中项显示） */}
+                  {isSelected && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="relative flex h-2 w-2">
+                        {isPlaying && (
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                        )}
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

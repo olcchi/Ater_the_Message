@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
+import { Button } from "@/components/ui/button";
+import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 
 export default function AudioPlayerControls() {
   const { state, controls } = useAudioPlayer();
@@ -7,13 +7,13 @@ export default function AudioPlayerControls() {
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getVolumeIcon = () => {
-    if (state.isMuted || state.volume === 0) return 'i-carbon-volume-mute';
-    if (state.volume < 0.5) return 'i-carbon-volume-down';
-    return 'i-carbon-volume-up';
+    if (state.isMuted || state.volume === 0) return "i-carbon-volume-mute";
+    if (state.volume < 0.5) return "i-carbon-volume-down";
+    return "i-carbon-volume-up";
   };
 
   if (!state.audioUrl) {
@@ -21,25 +21,25 @@ export default function AudioPlayerControls() {
   }
 
   return (
-    <div className="fixed bottom-4 z-50 bg-black/70 backdrop-blur-sm rounded-full border  border-neutral-800">
+    <div className="fixed bottom-4 z-50 bg-black/70 backdrop-blur-sm rounded-full border border-neutral-800">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-center gap-4">
           {/* 音乐封面和名称 */}
-          <div className="flex items-center gap-3 min-w-[200px]">
+          <div className="flex items-center gap-3">
             {state.cover ? (
               <img
                 src={state.cover}
-                alt={state.title || '音乐封面'}
-                className="w-12 h-12 rounded object-cover rounded-full border border-stone-900"
+                alt={state.title || "音乐封面"}
+                className="w-8 h-8 rounded object-cover rounded-full border border-stone-900"
               />
             ) : (
-              <div className="w-12 h-12 rounded bg-neutral-800 flex items-center justify-center">
+              <div className="w-8 h-8 rounded bg-neutral-800 flex items-center justify-center">
                 <span className="i-carbon-music text-neutral-500 text-xl" />
               </div>
             )}
             <div className="flex flex-col min-w-0">
               <div className="text-sm font-medium text-white truncate">
-                {state.title || '未知音乐'}
+                {state.title || "未知音乐"}
               </div>
               <div className="text-xs text-neutral-400">
                 {formatTime(state.currentTime)} / {formatTime(state.duration)}
@@ -55,7 +55,7 @@ export default function AudioPlayerControls() {
               size="icon"
               variant="ghost"
               className="text-white hover:bg-neutral-800"
-              aria-label={state.isPlaying ? '暂停' : '播放'}
+              aria-label={state.isPlaying ? "暂停" : "播放"}
             >
               {state.isLoading ? (
                 <span className="i-carbon-circle-dash animate-spin text-xl" />
@@ -74,7 +74,7 @@ export default function AudioPlayerControls() {
               size="icon"
               variant="ghost"
               className="text-white hover:bg-neutral-800"
-              aria-label={state.isMuted ? '取消静音' : '静音'}
+              aria-label={state.isMuted ? "取消静音" : "静音"}
             >
               <span className={`${getVolumeIcon()} text-xl`} />
             </Button>
@@ -94,6 +94,3 @@ export default function AudioPlayerControls() {
     </div>
   );
 }
-
-
-

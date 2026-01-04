@@ -15,18 +15,6 @@ const MUSIC_LIST: MusicItem[] = [
     cover: '/cover.png',
     number: 1
   },
-  {
-    url: '/After the Message copy2.mp3',
-    title: 'After the Message copy2',
-    cover: '/cover.png',
-    number: 2
-  },
-  {
-    url: '/After the Message copy.mp3',
-    title: 'After the Message copy',
-    cover: '/cover.png',
-    number: 3
-  },
 ];
 
 function AudioExperienceContent() {
@@ -56,8 +44,8 @@ function AudioExperienceContent() {
 
   return (
     <>
-      <div className="w-screen h-screen relative overflow-hidden flex justify-center pb-20">
-        <div className="absolute inset-0 bg-black/50 z-1" />
+      <div className="w-full h-full relative overflow-hidden flex justify-center pb-20">
+        {/* <div className="absolute inset-0 bg-black/50 z-1" /> */}
         <div className="absolute inset-0 z-0">
           <DarkVeil
             hueShift={21}
@@ -73,16 +61,17 @@ function AudioExperienceContent() {
           <img src={currentCover} alt={state.title || 'Untitled Music'} width={250} height={250} className="shadow-2xl shadow-blue-900" />
           <AudioWaveform className="w-4/5 max-w-2xl" waveColor="#233169" progressColor="#141C3A" cursorColor="#4A2665" />
         </div>
-        <GradualBlur
+        {/* <GradualBlur
           position="top"
           height="12rem"
           strength={3}
-        />
+        /> */}
         <AudioPlayerControls />
         <MusicSelector
           musicList={MUSIC_LIST}
           currentIndex={currentIndex}
           onSelectMusic={handleSelectMusic}
+          isPlaying={state.isPlaying}
         />
       </div>
     </>
