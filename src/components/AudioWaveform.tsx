@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
@@ -25,6 +25,52 @@ export default function AudioWaveform({
 }: Props) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const { wavesurfer, registerWavesurfer, state } = useAudioPlayer();
+  
+  // 波形切换动画状态
+  const [animationState, setAnimationState] = useState<'entering' | 'visible' | 'exiting' | 'hidden'>('hidden');
+  const prevTrackIdRef = useRef<string | null>(null);
+  const pendingEnterRef = useRef(false); // 标记是否需要在 exit 完成后进入
+  
+  // 监听曲目切换，触发 fade out
+  useEffect(() => {
+    const currentTrackId = state.currentTrack?.id || null;
+    
+    // 曲目切换检测
+    if (prevTrackIdRef.current !== currentTrackId && currentTrackId) {
+      // 如果已经有波形显示，先 fade out
+      if (animationState === 'visible' || animationState === 'entering') {
+        setAnimationState('exiting');
+        pendingEnterRef.current = true; // 标记需要在退出后重新进入
+      }
+      prevTrackIdRef.current = currentTrackId;
+    }
+  }, [state.currentTrack?.id, animationState]);
+  
+  // 监听加载状态，触发 fade in
+  useEffect(() => {
+    if (!state.isLoading && !state.error && state.currentTrack?.id) {
+      // 首次加载或已经隐藏状态时直接进入
+      if (animationState === 'hidden') {
+        setAnimationState('entering');
+      }
+    }
+  }, [state.isLoading, state.error, state.currentTrack?.id, animationState]);
+  
+  // 动画结束后更新状态
+  const handleAnimationEnd = () => {
+    if (animationState === 'entering') {
+      setAnimationState('visible');
+    } else if (animationState === 'exiting') {
+      // 退出完成后，检查是否需要重新进入
+      if (pendingEnterRef.current) {
+        pendingEnterRef.current = false;
+        // 等待新波形加载完成，状态变化会触发上面的 useEffect
+        setAnimationState('hidden');
+      } else {
+        setAnimationState('hidden');
+      }
+    }
+  };
 
   useEffect(() => {
     if (!waveformRef.current) return;
@@ -74,8 +120,23 @@ export default function AudioWaveform({
             filter: blur(0);
           }
         }
+        @keyframes waveform-exit {
+          0% {
+            opacity: 1;
+            transform: scaleY(1);
+            filter: blur(0);
+          }
+          100% {
+            opacity: 0;
+            transform: scaleY(0.5);
+            filter: blur(4px);
+          }
+        }
         .animate-waveform-enter {
-          animation: waveform-enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+          animation: waveform-enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        .animate-waveform-exit {
+          animation: waveform-exit 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
         }
       `}</style>
       {state.error && (
@@ -90,7 +151,12 @@ export default function AudioWaveform({
       )}
       <div 
         ref={waveformRef} 
-        className={`w-full transition-opacity duration-300 ${!state.isLoading && !state.error ? 'animate-waveform-enter' : 'opacity-0'}`}
+        onAnimationEnd={handleAnimationEnd}
+        className={`w-full ${
+          animationState === 'entering' ? 'animate-waveform-enter' : 
+          animationState === 'exiting' ? 'animate-waveform-exit' : 
+          animationState === 'visible' ? 'opacity-100' : 'opacity-0'
+        }`}
       />
     </div>
   );

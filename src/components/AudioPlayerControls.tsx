@@ -65,8 +65,6 @@ const getPlayModeInfo = (mode: string) => {
       return { icon: 'i-carbon-repeat-one', label: '单曲循环' };
     case 'shuffle':
       return { icon: 'i-carbon-shuffle', label: '随机播放' };
-    case 'sequential':
-      return { icon: 'i-carbon-arrow-right', label: '顺序播放' };
     default:
       return { icon: 'i-carbon-repeat', label: '列表循环' };
   }

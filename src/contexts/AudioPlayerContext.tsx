@@ -14,12 +14,11 @@ export interface Track {
 
 /**
  * 播放模式
- * - sequential: 顺序播放，播完列表停止
  * - repeat-all: 列表循环，播完从头开始
  * - repeat-one: 单曲循环
  * - shuffle: 随机播放
  */
-export type PlayMode = 'sequential' | 'repeat-all' | 'repeat-one' | 'shuffle';
+export type PlayMode = 'repeat-all' | 'repeat-one' | 'shuffle';
 
 /**
  * 播放器状态

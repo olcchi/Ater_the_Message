@@ -94,7 +94,7 @@ export default function AudioPlayerProvider({
     const mode = playModeRef.current;
     
     if (len === 0) return -1;
-    if (len === 1) return mode === 'sequential' ? -1 : 0;
+    if (len === 1) return 0;
     
     switch (mode) {
       case 'repeat-one':
@@ -109,8 +109,6 @@ export default function AudioPlayerProvider({
         }
         return shuffled[pos + 1];
       }
-      case 'sequential':
-        return idx >= len - 1 ? -1 : idx + 1;
       case 'repeat-all':
       default:
         return (idx + 1) % len;
@@ -139,7 +137,6 @@ export default function AudioPlayerProvider({
         }
         return shuffled[pos - 1];
       }
-      case 'sequential':
       case 'repeat-all':
       default:
         return idx <= 0 ? len - 1 : idx - 1;
@@ -279,6 +276,16 @@ export default function AudioPlayerProvider({
   }, [loadAndPlayTrack]);
   
   const skipToNext = useCallback(() => {
+    const mode = playModeRef.current;
+    // 单曲循环模式下，重新播放当前曲目
+    if (mode === 'repeat-one') {
+      const ws = wavesurferRef.current;
+      if (ws) {
+        ws.seekTo(0);
+        ws.play();
+      }
+      return;
+    }
     const nextIdx = getNextIndex();
     if (nextIdx !== -1) {
       loadAndPlayTrack(nextIdx, true);
@@ -305,7 +312,7 @@ export default function AudioPlayerProvider({
   }, [generateShuffledIndices]);
   
   const cyclePlayMode = useCallback(() => {
-    const modes: PlayMode[] = ['repeat-all', 'repeat-one', 'shuffle', 'sequential'];
+    const modes: PlayMode[] = ['repeat-all', 'repeat-one', 'shuffle'];
     const currentIdx = modes.indexOf(playModeRef.current);
     const nextMode = modes[(currentIdx + 1) % modes.length];
     setPlayMode(nextMode);
@@ -366,8 +373,10 @@ export default function AudioPlayerProvider({
         ws.seekTo(0);
         ws.play();
       } else {
+        // 列表循环或随机播放：播放下一首
         const nextIdx = getNextIndex();
         if (nextIdx !== -1) {
+          // 在列表循环模式下，总是加载下一首（即使只有一首歌也要重新加载以完成循环）
           loadAndPlayTrack(nextIdx, true);
         }
       }
