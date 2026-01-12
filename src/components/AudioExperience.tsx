@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-// import GradualBlur from '@components/ui/GradualBlur/GradualBlur';
 import DarkVeil from './DarkVeil';
 import AudioWaveform from '@components/AudioWaveform';
 import AudioPlayerProvider from '@components/AudioPlayerProvider';
@@ -12,110 +11,86 @@ import { Button } from './ui/button';
 function AudioExperienceContent() {
   const { state, controls, wavesurfer } = useAudioPlayer();
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [showCover, setShowCover] = useState(true);
 
+  // 设置音频分析器用于可视化效果
   useEffect(() => {
     if (!wavesurfer) return;
     const media = wavesurfer.getMediaElement();
     if (!media) return;
 
-    let ctx: AudioContext | null = null;
-
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      ctx = new AudioContext();
-      const ana = ctx.createAnalyser();
-      ana.fftSize = 2048;
-      ana.smoothingTimeConstant = 0.8;
-
-      const source = ctx.createMediaElementSource(media);
-      source.connect(ana);
-      ana.connect(ctx.destination);
-
-      setAnalyser(ana);
-    } catch (e) {
-      console.warn("Audio analysis setup failed:", e);
-    }
-
-    return () => {
-      if (ctx && ctx.state !== "closed") {
-        ctx.close();
-      }
-    };
-  }, [wavesurfer]);
-
-  useEffect(() => {
-    if (!wavesurfer) return;
-    const media = wavesurfer.getMediaElement();
-    if (!media) return;
-
-    let ctx: AudioContext | null = null;
-    let source: MediaElementAudioSourceNode | null = null;
     let ana: AnalyserNode | null = null;
+    let ctx: AudioContext | null = null;
 
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      ctx = new AudioContext();
+      // 使用共享的 AudioContext 避免重复创建
+      if (!(window as any)._sharedAudioContext) {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        (window as any)._sharedAudioContext = new AudioContext();
+      }
+      ctx = (window as any)._sharedAudioContext as AudioContext;
+      
+      if (!(window as any)._sharedMediaSources) {
+        (window as any)._sharedMediaSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
+      }
+      const sources = (window as any)._sharedMediaSources as WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>;
+
       ana = ctx.createAnalyser();
       ana.fftSize = 2048;
       ana.smoothingTimeConstant = 0.8;
 
-      source = ctx.createMediaElementSource(media);
-      source.connect(ana);
-      ana.connect(ctx.destination);
+      let source: MediaElementAudioSourceNode;
+      if (sources.has(media)) {
+        source = sources.get(media)!;
+      } else {
+        source = ctx.createMediaElementSource(media);
+        sources.set(media, source);
+      }
+
+      try {
+        source.connect(ana);
+        ana.connect(ctx.destination);
+      } catch (err) {
+        console.warn("Audio node connection warning:", err);
+      }
 
       setAnalyser(ana);
       
-      // Resume context on play if suspended
-      wavesurfer.on('play', () => {
+      const handlePlay = () => {
         if (ctx && ctx.state === 'suspended') {
           ctx.resume();
         }
-      });
+      };
+      
+      wavesurfer.on('play', handlePlay);
+      
+      return () => {
+        wavesurfer.un('play', handlePlay);
+        if (ana) {
+          try { 
+            ana.disconnect(); 
+          } catch(e) {}
+        }
+        setAnalyser(null);
+      };
+
     } catch (e) {
       console.warn("Audio analysis setup failed:", e);
     }
-
-    return () => {
-       if (source) {
-          try { source.disconnect(); } catch(e) {}
-       }
-       if (ana) {
-          try { ana.disconnect(); } catch(e) {}
-       }
-       if (ctx && ctx.state !== "closed") {
-         ctx.close();
-       }
-       setAnalyser(null);
-    };
   }, [wavesurfer]);
 
-  // 当音乐切换时，更新当前索引
-  useEffect(() => {
-    const index = PLAYLIST.findIndex(music => music.src === state.audioUrl);
-    if (index !== -1) {
-      setCurrentIndex(index);
-    }
-  }, [state.audioUrl]);
-
-  // 处理音乐选择
-  const handleSelectMusic = (index: number) => {
-    const music = PLAYLIST[index];
-    if (music) {
-      setCurrentIndex(index);
-      controls.loadAudio(music.src, music.title, music.cover, music.artist);
-    }
+  // 处理曲目选择
+  const handleSelectTrack = (index: number) => {
+    controls.playTrack(index);
   };
 
-  // 获取当前音乐的封面
-  const currentMusic = PLAYLIST[currentIndex] || PLAYLIST[0];
-  const currentCover = state.cover || currentMusic?.cover || '/covers/cover.png';
+  // 获取当前封面
+  const currentCover = state.currentTrack?.cover || '/covers/cover.png';
 
   return (
     <>
       <div className="w-full h-full relative overflow-hidden flex justify-center pb-20">
-        {/* <div className="absolute inset-0 bg-black/50 z-1" /> */}
+        {/* 背景可视化 */}
         <div className="absolute inset-0 z-0">
           <DarkVeil
             hueShift={32}
@@ -129,36 +104,36 @@ function AudioExperienceContent() {
           />
         </div>
         
-        {/* 工具栏区：视觉开关 + 音乐选择 */}
+        {/* 工具栏：视觉开关 + 音乐选择器 */}
         <div 
           className="fixed z-50 top-4 right-4 flex items-center gap-2 animate-fade-in-up"
           style={{ animationDelay: '300ms', animationFillMode: 'both' }}
         >
-           <Button
-             variant="ghost"
-             size="icon"
-             onClick={() => setShowCover(!showCover)}
-             className="w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-neutral-900 text-white hover:bg-neutral-900 hover:text-white transition-all"
-             title={showCover ? "隐藏封面" : "显示封面"}
-           >
-             {showCover ? (
-               <span className="i-carbon-view-off text-lg" />
-             ) : (
-               <span className="i-carbon-view text-lg" />
-             )}
-           </Button>
-           
-           <MusicSelector
-             musicList={PLAYLIST}
-             currentIndex={currentIndex}
-             onSelectMusic={handleSelectMusic}
-             isPlaying={state.isPlaying}
-             className=""
-           />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowCover(!showCover)}
+            className="w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm border border-neutral-900 text-white hover:bg-neutral-900 hover:text-white transition-all"
+            title={showCover ? "隐藏封面" : "显示封面"}
+          >
+            {showCover ? (
+              <span className="i-carbon-view-off text-lg" />
+            ) : (
+              <span className="i-carbon-view text-lg" />
+            )}
+          </Button>
+          
+          <MusicSelector
+            tracks={state.playlist}
+            currentIndex={state.currentIndex}
+            onSelectTrack={handleSelectTrack}
+            isPlaying={state.isPlaying}
+          />
         </div>
 
+        {/* 主内容区 */}
         <div className="absolute inset-0 flex flex-col gap-10 items-center justify-center z-10 transition-all duration-500">
-          {/* 封面区域 - 根据 showCover 状态控制显示/隐藏 */}
+          {/* 封面 */}
           <div 
             className={`
               transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden
@@ -167,15 +142,16 @@ function AudioExperienceContent() {
           >
             <img 
               src={currentCover} 
-              alt={state.title || 'Untitled Music'} 
+              alt={state.currentTrack?.title || 'Music Cover'} 
               width={250} 
               height={250} 
               decoding="async"
-              className="shadow-2xl shadow-blue-900 animate-fade-in-up" 
+              className="shadow-2xl shadow-blue-900 animate-fade-in-up rounded-lg" 
               style={{ animationDelay: '0ms', animationFillMode: 'both' }}
             />
           </div>
 
+          {/* 波形可视化 */}
           <div className="w-full flex justify-center animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
             <AudioWaveform 
               className="w-4/5 max-w-2xl transition-all duration-500"
@@ -185,11 +161,8 @@ function AudioExperienceContent() {
             />
           </div>
         </div>
-        {/* <GradualBlur
-          position="top"
-          height="12rem"
-          strength={3}
-        /> */}
+        
+        {/* 播放控制器 */}
         <AudioPlayerControls />
       </div>
     </>
@@ -197,15 +170,8 @@ function AudioExperienceContent() {
 }
 
 export default function AudioExperience() {
-  const defaultMusic = PLAYLIST[0];
-  
   return (
-    <AudioPlayerProvider
-      defaultAudioUrl={defaultMusic?.src}
-      defaultTitle={defaultMusic?.title}
-      defaultCover={defaultMusic?.cover}
-      defaultArtist={defaultMusic?.artist}
-    >
+    <AudioPlayerProvider initialPlaylist={PLAYLIST} initialIndex={0}>
       <AudioExperienceContent />
     </AudioPlayerProvider>
   );

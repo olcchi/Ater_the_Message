@@ -24,7 +24,7 @@ export default function AudioWaveform({
   cursorColor
 }: Props) {
   const waveformRef = useRef<HTMLDivElement>(null);
-  const { wavesurfer, setWavesurfer, state } = useAudioPlayer();
+  const { wavesurfer, registerWavesurfer, state } = useAudioPlayer();
 
   useEffect(() => {
     if (!waveformRef.current) return;
@@ -49,7 +49,7 @@ export default function AudioWaveform({
     } as any);
 
     // 注册到 context
-    setWavesurfer(ws);
+    registerWavesurfer(ws);
 
     // 清理函数
     return () => {

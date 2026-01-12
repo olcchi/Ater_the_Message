@@ -6,35 +6,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { MusicTrack } from "@/data/playlist";
+import type { Track } from "@/contexts/AudioPlayerContext";
 
 interface MusicSelectorProps {
-  musicList: MusicTrack[];
+  tracks: Track[];
   currentIndex: number;
-  onSelectMusic: (index: number) => void;
+  onSelectTrack: (index: number) => void;
   isPlaying: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export default function MusicSelector({
-  musicList,
+  tracks,
   currentIndex,
-  onSelectMusic,
+  onSelectTrack,
   isPlaying,
   className = "",
   style
 }: MusicSelectorProps) {
   const [open, setOpen] = useState(false);
 
-  if (!musicList || musicList.length === 0) return null;
+  if (!tracks || tracks.length === 0) return null;
 
-  const currentItem = musicList[currentIndex];
+  const currentTrack = tracks[currentIndex];
   const currentValue = currentIndex.toString();
 
   const handleValueChange = (value: string) => {
     const index = parseInt(value, 10);
-    onSelectMusic(index);
+    onSelectTrack(index);
   };
 
   const formatNumber = (index: number) => String(index + 1).padStart(2, "0");
@@ -62,7 +62,7 @@ export default function MusicSelector({
           `}
         >
           <SelectValue>
-            {currentItem ? (
+            {currentTrack ? (
               <div className="flex items-center gap-2 w-full flex-1 min-w-0 pr-2 text-left">
                 {/* 编号 */}
                 <span className="text-sm w-5 opacity-40 shrink-0 min-w-content font-mono">
@@ -71,7 +71,7 @@ export default function MusicSelector({
 
                 {/* 标题 */}
                 <span className="text-sm flex-1 tracking-wide font-mono min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                  {currentItem.title}
+                  {currentTrack.title}
                 </span>
 
                 {/* 播放状态指示器 */}
@@ -97,28 +97,31 @@ export default function MusicSelector({
           "
           position="popper"
         >
-          {musicList.map((item, index) => {
-            return (
-              <SelectItem
-                key={item.id}
-                value={index.toString()}
-                className={`
-                  text-white cursor-pointer
-                  focus:bg-neutral-900 focus:text-white
-                  data-[highlighted]:bg-neutral-900 data-[highlighted]:text-white
-                `}
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <span className="text-sm w-5 opacity-40 shrink-0 font-mono">
-                    {formatNumber(index)}
+          {tracks.map((track, index) => (
+            <SelectItem
+              key={track.id}
+              value={index.toString()}
+              className={`
+                text-white cursor-pointer
+                focus:bg-neutral-900 focus:text-white
+                data-[highlighted]:bg-neutral-900 data-[highlighted]:text-white
+              `}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <span className="text-sm w-5 opacity-40 shrink-0 font-mono">
+                  {formatNumber(index)}
+                </span>
+                <span className="text-sm truncate flex-1 tracking-wide font-mono">
+                  {track.title}
+                </span>
+                {track.artist && (
+                  <span className="text-xs text-neutral-500 truncate">
+                    {track.artist}
                   </span>
-                  <span className="text-sm truncate flex-1 tracking-wide font-mono">
-                    {item.title}
-                  </span>
-                </div>
-              </SelectItem>
-            );
-          })}
+                )}
+              </div>
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
