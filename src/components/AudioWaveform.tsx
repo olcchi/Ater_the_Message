@@ -31,12 +31,14 @@ export default function AudioWaveform({
     if (wavesurfer) return; // 如果已经存在实例，不重复创建
 
     // 创建 WaveSurfer 实例
+    const audio = document.createElement('audio');
     const ws = WaveSurfer.create({
       container: waveformRef.current,
+      media: audio,
       height,
       normalize,
       interact,
-      backend: 'WebAudio',
+      // backend: 'WebAudio', // v7 中不需要此选项，且使用 media 选项时会自动处理
       mediaControls: false,
       waveColor,
       progressColor: progressColor || waveColor,

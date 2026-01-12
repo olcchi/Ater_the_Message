@@ -117,8 +117,9 @@ export default function AudioPlayerProvider({
       try {
         wavesurferRef.current.load(track.url);
         if (autoPlay) {
-          wavesurferRef.current.once('ready', () => {
-            wavesurferRef.current?.play();
+          // 不等待波形生成完毕(ready事件)，直接播放以支持流式传输
+          wavesurferRef.current.play().catch(err => {
+             console.warn('Auto-play failed:', err);
           });
         }
       } catch (err) {
@@ -227,15 +228,34 @@ export default function AudioPlayerProvider({
     // 监听时长更新
     ws.on('ready', () => {
       setDuration(ws.getDuration());
-      setIsLoading(false);
+      // setIsLoading(false); // ready 事件代表波形生成完毕，不代表音频可播放，音频可播放由 canplay 控制
       setError(null);
     });
 
     // 监听加载开始
-    ws.on('loading', () => {
-      setIsLoading(true);
-      setError(null);
+    // 注意：ws.on('loading') 代表波形数据的下载。为了流式播放，我们不应该因为波形正在下载就显示全屏加载中。
+    // 我们只关心 media 元素的缓冲状态 (waiting/canplay)。
+    ws.on('loading', (percent) => {
+      // 可以在这里处理波形加载进度，但不设置全局 isLoading
+      console.log('Waveform loading:', percent);
     });
+
+    // 针对流式播放的优化：监听 media 元素事件
+    const media = ws.getMediaElement();
+    if (media) {
+      media.addEventListener('canplay', () => {
+        setIsLoading(false);
+      });
+      media.addEventListener('waiting', () => {
+        setIsLoading(true);
+      });
+      media.addEventListener('playing', () => {
+        setIsLoading(false);
+      });
+      media.addEventListener('loadedmetadata', () => {
+        setDuration(media.duration);
+      });
+    }
 
     // 初始加载逻辑
     if (audioUrlRef.current) {
