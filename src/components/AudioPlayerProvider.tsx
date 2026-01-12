@@ -40,7 +40,10 @@ export default function AudioPlayerProvider({
   const playModeRef = useRef(playMode);
   const shuffledIndicesRef = useRef(shuffledIndices);
   const volumeRef = useRef(volume);
+  const currentTimeRef = useRef(currentTime);
+  const volumeBeforeMuteRef = useRef(volume); // 静音前的音量
   const pendingAutoPlay = useRef(false);
+  const mediaEventCleanupRef = useRef<(() => void) | null>(null); // 清理 media 事件监听器
 
   // 同步 refs
   useEffect(() => { playlistRef.current = playlist; }, [playlist]);
@@ -48,6 +51,7 @@ export default function AudioPlayerProvider({
   useEffect(() => { playModeRef.current = playMode; }, [playMode]);
   useEffect(() => { shuffledIndicesRef.current = shuffledIndices; }, [shuffledIndices]);
   useEffect(() => { volumeRef.current = volume; }, [volume]);
+  useEffect(() => { currentTimeRef.current = currentTime; }, [currentTime]);
   useEffect(() => { wavesurferRef.current = wavesurfer; }, [wavesurfer]);
 
   // ==================== 派生状态 ====================
@@ -219,6 +223,10 @@ export default function AudioPlayerProvider({
     const vol = Math.max(0, Math.min(1, newVolume));
     setVolumeState(vol);
     wavesurferRef.current?.setVolume(vol);
+    // 记录非零音量用于取消静音时恢复
+    if (vol > 0) {
+      volumeBeforeMuteRef.current = vol;
+    }
     setIsMuted(vol === 0);
   }, []);
   
@@ -227,10 +235,16 @@ export default function AudioPlayerProvider({
     if (!ws) return;
     
     if (isMuted) {
-      const vol = volumeRef.current > 0 ? volumeRef.current : 0.5;
+      // 恢复到静音前的音量，若没有则使用 0.5
+      const vol = volumeBeforeMuteRef.current > 0 ? volumeBeforeMuteRef.current : 0.5;
       ws.setVolume(vol);
+      setVolumeState(vol);
       setIsMuted(false);
     } else {
+      // 记录当前音量然后静音
+      if (volumeRef.current > 0) {
+        volumeBeforeMuteRef.current = volumeRef.current;
+      }
       ws.setVolume(0);
       setIsMuted(true);
     }
@@ -272,8 +286,8 @@ export default function AudioPlayerProvider({
   }, [getNextIndex, loadAndPlayTrack]);
   
   const skipToPrevious = useCallback(() => {
-    // 如果当前播放超过 3 秒，重新播放当前曲目
-    if (currentTime > 3) {
+    // 如果当前播放超过 3 秒，重新播放当前曲目（使用 ref 避免频繁重建）
+    if (currentTimeRef.current > 3) {
       seekTo(0);
       return;
     }
@@ -281,7 +295,7 @@ export default function AudioPlayerProvider({
     if (prevIdx !== -1) {
       loadAndPlayTrack(prevIdx, true);
     }
-  }, [currentTime, seekTo, getPreviousIndex, loadAndPlayTrack]);
+  }, [seekTo, getPreviousIndex, loadAndPlayTrack]);
   
   const setPlayMode = useCallback((mode: PlayMode) => {
     setPlayModeState(mode);
@@ -300,6 +314,12 @@ export default function AudioPlayerProvider({
   // ==================== WaveSurfer 注册 ====================
   
   const registerWavesurfer = useCallback((ws: WaveSurfer | null) => {
+    // 清理旧的 media 事件监听器
+    if (mediaEventCleanupRef.current) {
+      mediaEventCleanupRef.current();
+      mediaEventCleanupRef.current = null;
+    }
+    
     // 清理旧实例
     if (wavesurferRef.current && wavesurferRef.current !== ws) {
       try {
@@ -353,13 +373,26 @@ export default function AudioPlayerProvider({
       }
     });
     
-    // 流式播放优化
+    // 流式播放优化 - 添加 media 事件监听器并保存清理函数
     const media = ws.getMediaElement();
     if (media) {
-      media.addEventListener('canplay', () => setIsLoading(false));
-      media.addEventListener('waiting', () => setIsLoading(true));
-      media.addEventListener('playing', () => setIsLoading(false));
-      media.addEventListener('loadedmetadata', () => setDuration(media.duration));
+      const handleCanPlay = () => setIsLoading(false);
+      const handleWaiting = () => setIsLoading(true);
+      const handlePlaying = () => setIsLoading(false);
+      const handleLoadedMetadata = () => setDuration(media.duration);
+      
+      media.addEventListener('canplay', handleCanPlay);
+      media.addEventListener('waiting', handleWaiting);
+      media.addEventListener('playing', handlePlaying);
+      media.addEventListener('loadedmetadata', handleLoadedMetadata);
+      
+      // 保存清理函数
+      mediaEventCleanupRef.current = () => {
+        media.removeEventListener('canplay', handleCanPlay);
+        media.removeEventListener('waiting', handleWaiting);
+        media.removeEventListener('playing', handlePlaying);
+        media.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
     }
     
     // 初始加载

@@ -92,10 +92,8 @@ export interface AudioPlayerContextValue {
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
 
-export function AudioPlayerProvider({ children }: { children: ReactNode }) {
-  // 这个 provider 将在 AudioPlayerProvider.tsx 中实现
-  return <>{children}</>;
-}
+// 注意：实际的 AudioPlayerProvider 实现在 @components/AudioPlayerProvider.tsx
+// 此处不再导出空壳 Provider，避免误用
 
 export function useAudioPlayer() {
   const context = useContext(AudioPlayerContext);

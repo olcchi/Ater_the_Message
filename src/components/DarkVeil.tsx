@@ -203,7 +203,7 @@ export default function DarkVeil({
   return (
     <>
       <div className="bg-black/60 absolute inset-0 z-0" />
-      <canvas ref={ref} className="w-full h-full min-w-300" />;
+      <canvas ref={ref} className="w-full h-full min-w-[300px]" />
     </>
   );
 }

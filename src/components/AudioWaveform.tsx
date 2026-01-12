@@ -48,14 +48,13 @@ export default function AudioWaveform({
       barRadius: 0,
     } as any);
 
-    // 注册到 context
+    // 注册到 context（Provider 会负责管理实例的生命周期）
     registerWavesurfer(ws);
 
-    // 清理函数
+    // 清理函数：不在这里销毁，由 Provider 统一管理
     return () => {
-      if (ws) {
-        ws.destroy();
-      }
+      // 通知 Provider 取消注册（如果需要）
+      // ws.destroy() 由 Provider 的 registerWavesurfer 管理
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [height, normalize, interact, waveColor, progressColor, cursorColor]);
