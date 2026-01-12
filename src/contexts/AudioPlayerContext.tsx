@@ -4,8 +4,11 @@ import WaveSurfer from 'wavesurfer.js';
 export interface Track {
   url: string;
   title?: string;
+  artist?: string;
   cover?: string;
 }
+
+export type PlayMode = 'sequence' | 'loop' | 'shuffle';
 
 export interface AudioPlayerState {
   isPlaying: boolean;
@@ -17,12 +20,13 @@ export interface AudioPlayerState {
   isMuted: boolean;
   audioUrl: string | null;
   title?: string;
+  artist?: string;
   cover?: string;
   playlist: Track[];
   currentIndex: number;
   hasPrevious: boolean;
   hasNext: boolean;
-  isLooping: boolean;
+  playMode: PlayMode;
 }
 
 export interface AudioPlayerControls {
@@ -30,11 +34,11 @@ export interface AudioPlayerControls {
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   seekTo: (time: number) => void;
-  loadAudio: (url: string, title?: string, cover?: string) => void;
+  loadAudio: (url: string, title?: string, cover?: string, artist?: string) => void;
   setPlaylist: (tracks: Track[], startIndex?: number) => void;
   skipToNext: () => void;
   skipToPrevious: () => void;
-  toggleLoop: () => void;
+  togglePlayMode: () => void;
 }
 
 export interface AudioPlayerContextValue {

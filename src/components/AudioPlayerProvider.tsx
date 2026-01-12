@@ -1,21 +1,23 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { AudioPlayerContext } from '@/contexts/AudioPlayerContext';
-import type { AudioPlayerState, AudioPlayerControls, Track } from '@/contexts/AudioPlayerContext';
+import type { AudioPlayerState, AudioPlayerControls, Track, PlayMode } from '@/contexts/AudioPlayerContext';
 
 interface AudioPlayerProviderProps {
   children: ReactNode;
   defaultAudioUrl?: string;
   defaultTitle?: string;
   defaultCover?: string;
+  defaultArtist?: string;
 }
 
 export default function AudioPlayerProvider({
   children,
   defaultAudioUrl,
   defaultTitle,
-  defaultCover
+  defaultCover,
+  defaultArtist
 }: AudioPlayerProviderProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -24,9 +26,10 @@ export default function AudioPlayerProvider({
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [isLooping, setIsLooping] = useState(false);
+  const [playMode, setPlayMode] = useState<PlayMode>('sequence');
   const [audioUrl, setAudioUrl] = useState<string | null>(defaultAudioUrl || null);
   const [title, setTitle] = useState<string | undefined>(defaultTitle);
+  const [artist, setArtist] = useState<string | undefined>(defaultArtist);
   const [cover, setCover] = useState<string | undefined>(defaultCover);
   const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
   
@@ -36,12 +39,14 @@ export default function AudioPlayerProvider({
       return [{
         url: defaultAudioUrl,
         title: defaultTitle,
+        artist: defaultArtist,
         cover: defaultCover
       }];
     }
     return [];
   });
   const [currentIndex, setCurrentIndexState] = useState(defaultAudioUrl ? 0 : -1);
+  const [shuffledIndices, setShuffledIndices] = useState<number[]>([]);
 
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   
@@ -49,10 +54,15 @@ export default function AudioPlayerProvider({
   const playlistRef = useRef<Track[]>(playlist);
   const currentIndexRef = useRef(currentIndex);
   const audioUrlRef = useRef(audioUrl);
-  const isLoopingRef = useRef(isLooping);
+  const playModeRef = useRef(playMode);
+  const shuffledIndicesRef = useRef(shuffledIndices);
 
   useEffect(() => {
     playlistRef.current = playlist;
+    // 当播放列表变化时，如果处于随机模式，重新生成随机索引
+    if (playModeRef.current === 'shuffle') {
+      generateShuffledIndices(playlist.length);
+    }
   }, [playlist]);
 
   useEffect(() => {
@@ -64,8 +74,27 @@ export default function AudioPlayerProvider({
   }, [audioUrl]);
 
   useEffect(() => {
-    isLoopingRef.current = isLooping;
-  }, [isLooping]);
+    playModeRef.current = playMode;
+    // 如果切换到随机模式，生成随机索引
+    if (playMode === 'shuffle' && shuffledIndicesRef.current.length !== playlistRef.current.length) {
+      generateShuffledIndices(playlistRef.current.length);
+    }
+  }, [playMode]);
+
+  useEffect(() => {
+    shuffledIndicesRef.current = shuffledIndices;
+  }, [shuffledIndices]);
+
+  const generateShuffledIndices = (length: number) => {
+    const indices = Array.from({ length }, (_, i) => i);
+    // Fisher-Yates Shuffle
+    for (let i = length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    setShuffledIndices(indices);
+    shuffledIndicesRef.current = indices;
+  };
 
   const togglePlayPause = useCallback(() => {
     if (wavesurferRef.current) {
@@ -110,6 +139,7 @@ export default function AudioPlayerProvider({
     setCurrentIndexState(index);
     setAudioUrl(track.url);
     setTitle(track.title);
+    setArtist(track.artist);
     setCover(track.cover);
     
     if (wavesurferRef.current) {
@@ -141,36 +171,132 @@ export default function AudioPlayerProvider({
       setCurrentIndexState(-1);
       setAudioUrl(null);
       setTitle(undefined);
+      setArtist(undefined);
       setCover(undefined);
       wavesurferRef.current?.empty();
     }
   }, [loadTrack]);
 
-  const loadAudio = useCallback((url: string, newTitle?: string, newCover?: string) => {
-    const track: Track = { url, title: newTitle, cover: newCover };
+  const loadAudio = useCallback((url: string, newTitle?: string, newCover?: string, newArtist?: string) => {
+    const track: Track = { url, title: newTitle, cover: newCover, artist: newArtist };
     setPlaylist([track], 0);
   }, [setPlaylist]);
 
-  const skipToNext = useCallback(() => {
-    if (currentIndexRef.current < playlistRef.current.length - 1) {
-      loadTrack(currentIndexRef.current + 1, true);
+  const getNextIndex = useCallback(() => {
+    const currentMode = playModeRef.current;
+    const currentIdx = currentIndexRef.current;
+    const tracks = playlistRef.current;
+    const count = tracks.length;
+
+    if (count === 0) return -1;
+
+    if (currentMode === 'shuffle') {
+      const indices = shuffledIndicesRef.current;
+      // 找到当前歌曲在随机列表中的位置
+      const shuffleIdx = indices.indexOf(currentIdx);
+      if (shuffleIdx === -1 || shuffleIdx === indices.length - 1) {
+        // 如果找不到或已经是最后一个，回到随机列表的第一个
+        return indices[0];
+      }
+      return indices[shuffleIdx + 1];
     }
-  }, [loadTrack]);
+
+    // Sequence & Loop (manual next)
+    // 列表循环：如果到底了，回到开头
+    if (currentIdx >= count - 1) {
+      return 0; 
+    }
+    return currentIdx + 1;
+  }, []);
+
+  const getPreviousIndex = useCallback(() => {
+    const currentMode = playModeRef.current;
+    const currentIdx = currentIndexRef.current;
+    const tracks = playlistRef.current;
+    const count = tracks.length;
+
+    if (count === 0) return -1;
+
+    if (currentMode === 'shuffle') {
+      const indices = shuffledIndicesRef.current;
+      const shuffleIdx = indices.indexOf(currentIdx);
+      if (shuffleIdx <= 0) {
+        // 如果找不到或已经是第一个，回到随机列表的最后一个
+        return indices[indices.length - 1];
+      }
+      return indices[shuffleIdx - 1];
+    }
+
+    // Sequence & Loop (manual prev)
+    // 列表循环
+    if (currentIdx <= 0) {
+      return count - 1;
+    }
+    return currentIdx - 1;
+  }, []);
+
+  const skipToNext = useCallback(() => {
+    const nextIndex = getNextIndex();
+    if (nextIndex !== -1) {
+      loadTrack(nextIndex, true);
+    }
+  }, [loadTrack, getNextIndex]);
 
   const skipToPrevious = useCallback(() => {
-    if (currentIndexRef.current > 0) {
-      loadTrack(currentIndexRef.current - 1, true);
+    const prevIndex = getPreviousIndex();
+    if (prevIndex !== -1) {
+      loadTrack(prevIndex, true);
     }
-  }, [loadTrack]);
+  }, [loadTrack, getPreviousIndex]);
 
-  const toggleLoop = useCallback(() => {
-    setIsLooping(prev => !prev);
+  const togglePlayMode = useCallback(() => {
+    setPlayMode(prev => {
+      if (prev === 'sequence') return 'loop';
+      if (prev === 'loop') return 'shuffle';
+      return 'sequence';
+    });
   }, []);
 
   // 同步 ref
   useEffect(() => {
     wavesurferRef.current = wavesurfer;
   }, [wavesurfer]);
+
+  // Media Session API 集成
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      // 更新元数据
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title || 'Unknown Title',
+        artist: artist || 'Unknown Artist',
+        artwork: cover ? [{ src: cover, sizes: '512x512', type: 'image/png' }] : []
+      });
+
+      // 设置播放状态
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+      // 设置动作处理器
+      const actionHandlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+        ['play', () => wavesurferRef.current?.play()],
+        ['pause', () => wavesurferRef.current?.pause()],
+        ['previoustrack', () => skipToPrevious()],
+        ['nexttrack', () => skipToNext()],
+        ['seekto', (details) => {
+          if (details.seekTime !== undefined) {
+             seekTo(details.seekTime);
+          }
+        }]
+      ];
+
+      actionHandlers.forEach(([action, handler]) => {
+        try {
+          navigator.mediaSession.setActionHandler(action, handler);
+        } catch (error) {
+          console.warn(`Media Session action ${action} not supported`);
+        }
+      });
+    }
+  }, [title, artist, cover, isPlaying, skipToNext, skipToPrevious, seekTo]);
 
   // 注册事件监听器
   const registerWavesurfer = useCallback((ws: WaveSurfer | null) => {
@@ -210,13 +336,18 @@ export default function AudioPlayerProvider({
     // 监听播放结束，自动播放下一首或循环播放
     ws.on('finish', () => {
       setIsPlaying(false);
-      if (isLoopingRef.current) {
+      const mode = playModeRef.current;
+      
+      if (mode === 'loop') {
         // 单曲循环：重新播放当前曲目
         ws.seekTo(0);
         ws.play();
-      } else if (currentIndexRef.current < playlistRef.current.length - 1) {
-        // 正常播放下一首
-        loadTrack(currentIndexRef.current + 1, true);
+      } else {
+        // 列表循环 或 随机播放：自动播放下一首
+        const nextIndex = getNextIndex();
+        if (nextIndex !== -1) {
+            loadTrack(nextIndex, true);
+        }
       }
     });
 
@@ -228,15 +359,10 @@ export default function AudioPlayerProvider({
     // 监听时长更新
     ws.on('ready', () => {
       setDuration(ws.getDuration());
-      // setIsLoading(false); // ready 事件代表波形生成完毕，不代表音频可播放，音频可播放由 canplay 控制
       setError(null);
     });
 
-    // 监听加载开始
-    // 注意：ws.on('loading') 代表波形数据的下载。为了流式播放，我们不应该因为波形正在下载就显示全屏加载中。
-    // 我们只关心 media 元素的缓冲状态 (waiting/canplay)。
     ws.on('loading', (percent) => {
-      // 可以在这里处理波形加载进度，但不设置全局 isLoading
       console.log('Waveform loading:', percent);
     });
 
@@ -267,7 +393,28 @@ export default function AudioPlayerProvider({
          setIsLoading(false);
        }
     }
-  }, [volume, loadTrack]); // audioUrlRef is a ref, stable. volume is state.
+  }, [volume, loadTrack, getNextIndex]); 
+  
+  // 计算 hasPrevious 和 hasNext 状态
+  const hasPrevious = useMemo(() => {
+    // 列表为空
+    if (playlist.length === 0) return false;
+    // 单曲循环或随机播放模式下，总是允许切换（除非列表只有一首）
+    if (playMode === 'loop' || playMode === 'shuffle') return playlist.length > 1;
+    // 列表循环模式
+    // 如果是第一首，上一曲会回到最后一首，所以只要列表大于1就有上一曲
+    return playlist.length > 1; 
+  }, [playlist.length, playMode]);
+
+  const hasNext = useMemo(() => {
+    // 列表为空
+    if (playlist.length === 0) return false;
+    // 单曲循环或随机播放模式下，总是允许切换（除非列表只有一首）
+    if (playMode === 'loop' || playMode === 'shuffle') return playlist.length > 1;
+    // 列表循环模式
+    // 如果是最后一首，下一曲会回到第一首，所以只要列表大于1就有下一曲
+    return playlist.length > 1; 
+  }, [playlist.length, playMode]);
 
   const state: AudioPlayerState = {
     isPlaying,
@@ -279,12 +426,13 @@ export default function AudioPlayerProvider({
     isMuted,
     audioUrl,
     title,
+    artist,
     cover,
     playlist,
     currentIndex,
-    hasPrevious: currentIndex > 0,
-    hasNext: currentIndex < playlist.length - 1,
-    isLooping
+    hasPrevious,
+    hasNext,
+    playMode
   };
 
   const controls: AudioPlayerControls = {
@@ -296,7 +444,7 @@ export default function AudioPlayerProvider({
     setPlaylist,
     skipToNext,
     skipToPrevious,
-    toggleLoop
+    togglePlayMode
   };
 
   return (

@@ -13,6 +13,8 @@ interface MusicSelectorProps {
   currentIndex: number;
   onSelectMusic: (index: number) => void;
   isPlaying: boolean;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export default function MusicSelector({
@@ -20,6 +22,8 @@ export default function MusicSelector({
   currentIndex,
   onSelectMusic,
   isPlaying,
+  className = "",
+  style
 }: MusicSelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -37,8 +41,8 @@ export default function MusicSelector({
 
   return (
     <div 
-      className="fixed z-50 font-mono top-4 right-4 animate-fade-in-up"
-      style={{ animationDelay: '300ms', animationFillMode: 'both' }}
+      className={`font-mono ${className}`}
+      style={style}
     >
       <Select
         value={currentValue}
