@@ -1,21 +1,12 @@
 import { useState, useEffect } from 'react';
-import GradualBlur from '@components/ui/GradualBlur/GradualBlur';
+// import GradualBlur from '@components/ui/GradualBlur/GradualBlur';
 import DarkVeil from './DarkVeil';
 import AudioWaveform from '@components/AudioWaveform';
 import AudioPlayerProvider from '@components/AudioPlayerProvider';
 import AudioPlayerControls from '@components/AudioPlayerControls';
-import MusicSelector, { type MusicItem } from './MusicSelector';
+import MusicSelector from './MusicSelector';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
-
-// 音乐列表数据
-const MUSIC_LIST: MusicItem[] = [
-  {
-    url: '/After the Message.mp3',
-    title: 'After the Message',
-    cover: '/cover.png',
-    number: 1
-  },
-];
+import { PLAYLIST } from '@/data/playlist';
 
 function AudioExperienceContent() {
   const { state, controls } = useAudioPlayer();
@@ -23,7 +14,7 @@ function AudioExperienceContent() {
 
   // 当音乐切换时，更新当前索引
   useEffect(() => {
-    const index = MUSIC_LIST.findIndex(music => music.url === state.audioUrl);
+    const index = PLAYLIST.findIndex(music => music.src === state.audioUrl);
     if (index !== -1) {
       setCurrentIndex(index);
     }
@@ -31,16 +22,16 @@ function AudioExperienceContent() {
 
   // 处理音乐选择
   const handleSelectMusic = (index: number) => {
-    const music = MUSIC_LIST[index];
+    const music = PLAYLIST[index];
     if (music) {
       setCurrentIndex(index);
-      controls.loadAudio(music.url, music.title, music.cover);
+      controls.loadAudio(music.src, music.title, music.cover);
     }
   };
 
   // 获取当前音乐的封面
-  const currentMusic = MUSIC_LIST[currentIndex] || MUSIC_LIST[0];
-  const currentCover = state.cover || currentMusic?.cover || '/cover.png';
+  const currentMusic = PLAYLIST[currentIndex] || PLAYLIST[0];
+  const currentCover = state.cover || currentMusic?.cover || '/covers/cover.png';
 
   return (
     <>
@@ -58,8 +49,18 @@ function AudioExperienceContent() {
           />
         </div>
         <div className="absolute inset-0 flex flex-col gap-10 items-center justify-center z-10">
-          <img src={currentCover} alt={state.title || 'Untitled Music'} width={250} height={250} className="shadow-2xl shadow-blue-900" />
-          <AudioWaveform className="w-4/5 max-w-2xl" waveColor="#233169" progressColor="#141C3A" cursorColor="#4A2665" />
+          <img 
+            src={currentCover} 
+            alt={state.title || 'Untitled Music'} 
+            width={250} 
+            height={250} 
+            decoding="async"
+            className="shadow-2xl shadow-blue-900 animate-fade-in-up" 
+            style={{ animationDelay: '0ms', animationFillMode: 'both' }}
+          />
+          <div className="w-full flex justify-center animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+            <AudioWaveform className="w-4/5 max-w-2xl" waveColor="#233169" progressColor="#141C3A" cursorColor="#4A2665" />
+          </div>
         </div>
         {/* <GradualBlur
           position="top"
@@ -68,7 +69,7 @@ function AudioExperienceContent() {
         /> */}
         <AudioPlayerControls />
         <MusicSelector
-          musicList={MUSIC_LIST}
+          musicList={PLAYLIST}
           currentIndex={currentIndex}
           onSelectMusic={handleSelectMusic}
           isPlaying={state.isPlaying}
@@ -79,11 +80,11 @@ function AudioExperienceContent() {
 }
 
 export default function AudioExperience() {
-  const defaultMusic = MUSIC_LIST[0];
+  const defaultMusic = PLAYLIST[0];
   
   return (
     <AudioPlayerProvider
-      defaultAudioUrl={defaultMusic?.url}
+      defaultAudioUrl={defaultMusic?.src}
       defaultTitle={defaultMusic?.title}
       defaultCover={defaultMusic?.cover}
     >

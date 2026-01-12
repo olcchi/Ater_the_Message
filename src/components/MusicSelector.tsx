@@ -6,16 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-export interface MusicItem {
-  url: string;
-  title: string;
-  cover?: string;
-  number: number;
-}
+import type { MusicTrack } from "@/data/playlist";
 
 interface MusicSelectorProps {
-  musicList: MusicItem[];
+  musicList: MusicTrack[];
   currentIndex: number;
   onSelectMusic: (index: number) => void;
   isPlaying: boolean;
@@ -39,8 +33,13 @@ export default function MusicSelector({
     onSelectMusic(index);
   };
 
+  const formatNumber = (index: number) => String(index + 1).padStart(2, "0");
+
   return (
-    <div className="fixed z-50 font-mono top-4 right-4">
+    <div 
+      className="fixed z-50 font-mono top-4 right-4 animate-fade-in-up"
+      style={{ animationDelay: '300ms', animationFillMode: 'both' }}
+    >
       <Select
         value={currentValue}
         onValueChange={handleValueChange}
@@ -63,7 +62,7 @@ export default function MusicSelector({
               <div className="flex items-center gap-2 w-full flex-1 min-w-0 pr-2 text-left">
                 {/* 编号 */}
                 <span className="text-sm w-5 opacity-40 shrink-0 min-w-content font-mono">
-                  {String(currentItem.number).padStart(2, "0")}
+                  {formatNumber(currentIndex)}
                 </span>
 
                 {/* 标题 */}
@@ -97,7 +96,7 @@ export default function MusicSelector({
           {musicList.map((item, index) => {
             return (
               <SelectItem
-                key={item.url}
+                key={item.id}
                 value={index.toString()}
                 className={`
                   text-white cursor-pointer
@@ -107,7 +106,7 @@ export default function MusicSelector({
               >
                 <div className="flex items-center gap-2 w-full">
                   <span className="text-sm w-5 opacity-40 shrink-0 font-mono">
-                    {String(item.number).padStart(2, "0")}
+                    {formatNumber(index)}
                   </span>
                   <span className="text-sm truncate flex-1 tracking-wide font-mono">
                     {item.title}

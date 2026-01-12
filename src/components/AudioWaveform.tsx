@@ -7,6 +7,7 @@ type Props = {
   normalize?: boolean;
   interact?: boolean;
   className?: string;
+  style?: React.CSSProperties;
   waveColor?: string; // 波形图颜色
   progressColor?: string; // 已播放区域颜色
   cursorColor?: string; // 进度竖条（光标）颜色
@@ -17,6 +18,7 @@ export default function AudioWaveform({
   normalize = true,
   interact = true,
   className = '',
+  style,
   waveColor = '#233473',
   progressColor,
   cursorColor
@@ -54,7 +56,7 @@ export default function AudioWaveform({
   }, [height, normalize, interact, waveColor, progressColor, cursorColor]);
 
   return (
-    <div className={`audio-waveform h-[160px] relative flex items-center justify-center ${className}`}>
+    <div className={`audio-waveform h-[160px] relative flex items-center justify-center ${className}`} style={style}>
       {state.error && (
         <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-zinc-400">
           错误: {state.error}
