@@ -81,6 +81,7 @@ type Props = {
   scanlineFrequency?: number;
   warpAmount?: number;
   resolutionScale?: number;
+  analyser?: AnalyserNode | null;
 };
 
 export default function DarkVeil({
@@ -91,6 +92,7 @@ export default function DarkVeil({
   scanlineFrequency = 0,
   warpAmount = 0,
   resolutionScale = 1,
+  analyser,
 }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -133,15 +135,51 @@ export default function DarkVeil({
 
     const start = performance.now();
     let frame = 0;
+    
+    // Accumulate time boost from beats
+    let timeBoost = 0;
+    
+    const dataArray = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
 
     const loop = () => {
-      program.uniforms.uTime.value =
-        ((performance.now() - start) / 1000) * speed;
+      // Base time from clock
+      const clockTime = ((performance.now() - start) / 1000) * speed;
+      
+      // Audio Reactivity
+      let bass = 0;
+      
+      if (analyser && dataArray) {
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate bass (approx first 10-20 bins)
+        let bassSum = 0;
+        const bassCount = 16;
+        for(let i=0; i<bassCount; i++) {
+           bassSum += dataArray[i];
+        }
+        bass = bassSum / bassCount / 255.0; // 0-1
+      }
+      
+      // Use power function to isolate strong beats/kicks
+      const beatIntensity = Math.pow(bass, 3.5);
+      
+      // Add slight time progression on beats (pushes the animation forward)
+      timeBoost += beatIntensity * 0.005;
+      
+      program.uniforms.uTime.value = clockTime + timeBoost;
+      
+      // Reset color/noise to base values
       program.uniforms.uHueShift.value = hueShift;
       program.uniforms.uNoise.value = noiseIntensity;
-      program.uniforms.uScan.value = scanlineIntensity;
+      
+      // Apply warp reaction (distortion)
+      // Base warp + reaction. Moderate intensity.
+      program.uniforms.uWarp.value = warpAmount + beatIntensity * 0.15;
+      
+      // Slight scanline reaction
+      program.uniforms.uScan.value = scanlineIntensity + beatIntensity * 0.05;
       program.uniforms.uScanFreq.value = scanlineFrequency;
-      program.uniforms.uWarp.value = warpAmount;
+
       renderer.render({ scene: mesh });
       frame = requestAnimationFrame(loop);
     };
@@ -160,6 +198,7 @@ export default function DarkVeil({
     scanlineFrequency,
     warpAmount,
     resolutionScale,
+    analyser
   ]);
   return (
     <>

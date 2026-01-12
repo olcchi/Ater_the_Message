@@ -78,7 +78,7 @@ export default function AudioPlayerControls() {
       `}</style>
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[95vw]">
         <div 
-          className="bg-black rounded-full border shadow-2xl shadow-blue-900/30 border-white/10 px-4 py-2 sm:px-6 sm:py-3 animate-fade-in-up"
+          className="bg-black rounded-md border shadow-2xl shadow-blue-900/30 border-white/10 px-4 py-2 sm:px-6 sm:py-3 animate-fade-in-up"
           style={{ animationDelay: '200ms', animationFillMode: 'both' }}
         >
           <div className="flex items-center justify-between gap-4 sm:gap-6">

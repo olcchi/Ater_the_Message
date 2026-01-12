@@ -10,9 +10,86 @@ import { PLAYLIST } from '@/data/playlist';
 import { Button } from './ui/button';
 
 function AudioExperienceContent() {
-  const { state, controls } = useAudioPlayer();
+  const { state, controls, wavesurfer } = useAudioPlayer();
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCover, setShowCover] = useState(true);
+
+  useEffect(() => {
+    if (!wavesurfer) return;
+    const media = wavesurfer.getMediaElement();
+    if (!media) return;
+
+    let ctx: AudioContext | null = null;
+
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      ctx = new AudioContext();
+      const ana = ctx.createAnalyser();
+      ana.fftSize = 2048;
+      ana.smoothingTimeConstant = 0.8;
+
+      const source = ctx.createMediaElementSource(media);
+      source.connect(ana);
+      ana.connect(ctx.destination);
+
+      setAnalyser(ana);
+    } catch (e) {
+      console.warn("Audio analysis setup failed:", e);
+    }
+
+    return () => {
+      if (ctx && ctx.state !== "closed") {
+        ctx.close();
+      }
+    };
+  }, [wavesurfer]);
+
+  useEffect(() => {
+    if (!wavesurfer) return;
+    const media = wavesurfer.getMediaElement();
+    if (!media) return;
+
+    let ctx: AudioContext | null = null;
+    let source: MediaElementAudioSourceNode | null = null;
+    let ana: AnalyserNode | null = null;
+
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      ctx = new AudioContext();
+      ana = ctx.createAnalyser();
+      ana.fftSize = 2048;
+      ana.smoothingTimeConstant = 0.8;
+
+      source = ctx.createMediaElementSource(media);
+      source.connect(ana);
+      ana.connect(ctx.destination);
+
+      setAnalyser(ana);
+      
+      // Resume context on play if suspended
+      wavesurfer.on('play', () => {
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume();
+        }
+      });
+    } catch (e) {
+      console.warn("Audio analysis setup failed:", e);
+    }
+
+    return () => {
+       if (source) {
+          try { source.disconnect(); } catch(e) {}
+       }
+       if (ana) {
+          try { ana.disconnect(); } catch(e) {}
+       }
+       if (ctx && ctx.state !== "closed") {
+         ctx.close();
+       }
+       setAnalyser(null);
+    };
+  }, [wavesurfer]);
 
   // 当音乐切换时，更新当前索引
   useEffect(() => {
@@ -41,13 +118,14 @@ function AudioExperienceContent() {
         {/* <div className="absolute inset-0 bg-black/50 z-1" /> */}
         <div className="absolute inset-0 z-0">
           <DarkVeil
-            hueShift={25}
+            hueShift={32}
             noiseIntensity={0}
             scanlineIntensity={0.1}
             speed={1}
             scanlineFrequency={5}
             warpAmount={0.2}
             resolutionScale={1}
+            analyser={analyser}
           />
         </div>
         
@@ -93,7 +171,7 @@ function AudioExperienceContent() {
               width={250} 
               height={250} 
               decoding="async"
-              className="shadow-2xl shadow-blue-900 animate-fade-in-up rounded-lg" 
+              className="shadow-2xl shadow-blue-900 animate-fade-in-up" 
               style={{ animationDelay: '0ms', animationFillMode: 'both' }}
             />
           </div>
