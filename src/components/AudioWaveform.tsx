@@ -42,7 +42,10 @@ export default function AudioWaveform({
       mediaControls: false,
       waveColor,
       progressColor: progressColor || waveColor,
-      cursorColor: cursorColor || waveColor
+      cursorColor: cursorColor || waveColor,
+      barWidth: 1,
+      barGap: 2,
+      barRadius: 0,
     } as any);
 
     // 注册到 context
@@ -59,17 +62,37 @@ export default function AudioWaveform({
 
   return (
     <div className={`audio-waveform h-[160px] relative flex items-center justify-center ${className}`} style={style}>
+      <style>{`
+        @keyframes waveform-enter {
+          0% {
+            opacity: 0;
+            transform: scaleY(0.5);
+            filter: blur(4px);
+          }
+          100% {
+            opacity: 1;
+            transform: scaleY(1);
+            filter: blur(0);
+          }
+        }
+        .animate-waveform-enter {
+          animation: waveform-enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+      `}</style>
       {state.error && (
         <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-zinc-400">
           错误: {state.error}
         </div>
       )}
       {state.isLoading && !state.error && (
-        <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-zinc-400">
+        <div className="absolute inset-0 flex items-center justify-center p-3 text-center text-zinc-400 animate-pulse">
           正在加载音频...
         </div>
       )}
-      <div ref={waveformRef} className="w-full" />
+      <div 
+        ref={waveformRef} 
+        className={`w-full transition-opacity duration-300 ${!state.isLoading && !state.error ? 'animate-waveform-enter' : 'opacity-0'}`}
+      />
     </div>
   );
 }
